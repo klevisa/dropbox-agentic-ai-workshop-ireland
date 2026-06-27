@@ -10,7 +10,7 @@
 # MAGIC 3. **Drop your schemas** (`{prefix}_ti_intel/_risk/_cs/_tools`, `CASCADE`) — tables, UC functions,
 # MAGIC    masks, views, and the registered agent model.
 # MAGIC 4. **Delete your two Genie spaces** (titled `{prefix} · Threat Intel — …`).
-# MAGIC 5. **Delete the Chapter C MLflow experiment** (`/Users/<you>/aiapps-chapter-c-triage`).
+# MAGIC 5. **Delete the MLflow experiments** (`/Users/<you>/aiapps-chapter-b-triage` and `…-c-triage`).
 # MAGIC
 # MAGIC Set the widgets to the **same `catalog` you deployed with**, set `confirm` to **YES**, and Run All.
 # MAGIC The shared catalog itself (admin-owned) is left alone.
@@ -93,13 +93,13 @@ for s in hits:
     print(f"  deleted {s['space_id']}  {s['title']}")
 
 # COMMAND ----------
-# 5) delete the Chapter C MLflow experiment (Chapter C's triage_runner sets it at your home path;
-# it isn't bundle-tracked). An MLflow experiment at a workspace path IS a workspace object, so a
+# 5) delete the MLflow experiments (the agent deploy + triage_runner set these at your home path;
+# they aren't bundle-tracked). An MLflow experiment at a workspace path IS a workspace object, so a
 # `workspace delete` removes it permanently — cleaner than the API's soft-delete, which would leave a
 # trashed experiment at the same name and block re-creating it on your next run.
-experiment = f"/Users/{me}/aiapps-chapter-c-triage"
-res = subprocess.run([cli, "workspace", "delete", experiment], env=env, capture_output=True, text=True)
-print(f"  deleted experiment {experiment}" if res.returncode == 0
-      else f"  (no experiment to delete: {experiment})")
+for experiment in (f"/Users/{me}/aiapps-chapter-b-triage", f"/Users/{me}/aiapps-chapter-c-triage"):
+    res = subprocess.run([cli, "workspace", "delete", experiment], env=env, capture_output=True, text=True)
+    print(f"  deleted experiment {experiment}" if res.returncode == 0
+          else f"  (no experiment to delete: {experiment})")
 
 print("\n✅ Teardown complete. The shared catalog itself was left in place (admin-owned).")

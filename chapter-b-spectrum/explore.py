@@ -112,6 +112,10 @@ if not mine:
 # MAGIC on the caller's behalf.)
 # MAGIC
 # MAGIC Deploy it first: `databricks bundle run deploy_triage_agent -t dev` (or step **B** of `deploy_workshop.py`).
+# MAGIC
+# MAGIC **Traces:** every call is traced to the **`/Users/<you>/aiapps-chapter-b-triage`** experiment — open
+# MAGIC it and pick the **Traces** tab to see each tool the agent chose (Model Serving exports them
+# MAGIC asynchronously, so allow a minute after a call).
 
 # COMMAND ----------
 # Find your agent endpoint (named agents_<catalog>-<your tools schema>-<model>) and query it with a real

@@ -88,6 +88,13 @@ auth_policy = AuthPolicy(system_auth_policy=system_auth_policy, user_auth_policy
 # COMMAND ----------
 import mlflow
 
+# Route BOTH the deploy run and the endpoint's inference traces to a clean, findable experiment
+# (mirrors Chapter C's aiapps-chapter-c-triage). Without this, MLflow defaults to the deploy
+# notebook's auto-experiment and agents.deploy wires the endpoint's traces to that obscure path.
+EXPERIMENT = f"/Users/{ctx.me}/aiapps-chapter-b-triage"
+mlflow.set_experiment(EXPERIMENT)
+print(f"experiment (deploy run + agent traces): {EXPERIMENT}")
+
 mlflow.set_registry_uri("databricks-uc")
 with mlflow.start_run():
     logged = mlflow.pyfunc.log_model(

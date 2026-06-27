@@ -92,6 +92,7 @@ elif STEP == "B · Spectrum":
     )
     print("\n✅ Chapter B done. Next: open chapter-b-spectrum/explore.py (add the MCP in the AI "
           "Playground; query the agent), then come back for step C · Propose.")
+    print("   Agent traces: open the '/Users/<you>/aiapps-chapter-b-triage' experiment ▸ Traces.")
 
 elif STEP == "C · Propose (runbook + review app)":
     require(catalog=CATALOG, privileged_group=GROUP, warehouse_id=WAREHOUSE)
