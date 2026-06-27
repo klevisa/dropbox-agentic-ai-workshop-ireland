@@ -52,15 +52,17 @@ print("repo root:", root)
 def deploy_and_run(chapter, deploy_vars, runs):
     """Deploy one chapter's bundle with the given --var overrides, then `bundle run` each key in `runs`.
 
-    `runs` is a list of (resource_key, friendly_note). Variables are baked at deploy time; `bundle run`
-    just triggers the already-deployed job/app.
+    `runs` is a list of (resource_key, friendly_note). The same `--var` overrides are passed to BOTH
+    `bundle deploy` and `bundle run`: for Apps, `bundle run` re-resolves the app's env block, so an
+    unset `${var.warehouse_id}` (the committed config.yml ships blank) would otherwise fail with
+    "Must specify environment variable source using either `value` or `valueFrom`."
     """
     cwd = f"{root}/{chapter}"
     var_flags = [f"--var={k}={v}" for k, v in deploy_vars.items() if (v or "").strip()]
     run_cli(cli, ["bundle", "deploy", "-t", "dev", *var_flags], cwd, env)
     for key, note in runs:
         print(f"\n--- {note} ---")
-        run_cli(cli, ["bundle", "run", key, "-t", "dev"], cwd, env)
+        run_cli(cli, ["bundle", "run", key, "-t", "dev", *var_flags], cwd, env)
 
 
 # COMMAND ----------
