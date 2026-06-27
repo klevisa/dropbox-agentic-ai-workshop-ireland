@@ -12,6 +12,26 @@
 # MAGIC governed workflow.
 
 # COMMAND ----------
+# MAGIC %md
+# MAGIC ## 0. Install mlflow (serverless only)
+# MAGIC Serverless Python doesn't ship `mlflow`, which §3 uses to query the agent endpoint. Install it and
+# MAGIC restart the interpreter **first** — `%restart_python` clears earlier state, so this has to run before
+# MAGIC `%run ./common` and everything below.
+# MAGIC
+# MAGIC Leave `PYPI_INDEX` blank to install from public PyPI. Only set it if your workspace blocks public
+# MAGIC PyPI and you have an internal mirror (`pip` reads it via `PIP_INDEX_URL`).
+
+# COMMAND ----------
+import os
+PYPI_INDEX = ""  # <- leave blank for public PyPI; set to your internal index only if PyPI is blocked
+if PYPI_INDEX.strip():
+    os.environ["PIP_INDEX_URL"] = PYPI_INDEX.strip()
+
+# COMMAND ----------
+# MAGIC %pip install -q mlflow
+# MAGIC %restart_python
+
+# COMMAND ----------
 # MAGIC %run ./common
 
 # COMMAND ----------
