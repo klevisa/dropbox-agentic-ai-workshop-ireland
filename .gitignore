@@ -1,0 +1,17 @@
+# Databricks Asset Bundle local state — per-chapter deploy state + downloaded terraform &
+# provider binaries (~130 MB/chapter). Machine-specific; never commit.
+.databricks/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# e2e MCP-probe virtualenv (recreate via tests/e2e/requirements.txt)
+tests/e2e/.venv/
+
+# local test config (your workspace specifics) — copy from tests/config.env.example
+tests/config.env
+
+# macOS
+.DS_Store

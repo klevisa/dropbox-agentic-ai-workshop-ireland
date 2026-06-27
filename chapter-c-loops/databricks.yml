@@ -1,0 +1,84 @@
+# Chapter C — Agent loops (Databricks Asset Bundle) · Agentic AI Apps Workshop
+# Two jobs that bookend a human approval gate, plus a Review UI app for that gate:
+#   runbook_builder  — two-stage LLM synthesis of investigations -> PROPOSED runbook rules
+#   review_console   — Databricks App (OBO): review PROPOSED rules, Approve/Reject in the browser
+#                      (the UI version of the approval cell in explore.py)
+#   triage_runner    — matches NEW incidents to APPROVED rules, runs each rule's DSL plan by calling
+#                      the Chapter A UC functions directly, writes recommendations (Option A: no MCP).
+#
+# The jobs run on serverless via ai_query (no warehouse); the app runs SQL through a warehouse. Set
+# your values in config.yml. Then:
+#   databricks bundle deploy -t dev
+#   databricks bundle run runbook_builder -t dev      # propose
+#   databricks bundle run review_console  -t dev      # start the Review UI  (or approve in explore.py)
+#   databricks bundle run triage_runner   -t dev      # triage
+#
+# PREREQ for the app's OBO (admin, once): enable user authorization for the workspace so the app's
+# `user_api_scopes: [sql]` takes effect, then restart the app. Until then the writes fail. (Same as
+# Chapter B's MCP.)
+bundle:
+  name: aiapps-chapter-c
+
+include:
+  - config.yml
+
+variables:
+  catalog:
+    description: The shared catalog (same one used in Chapters A/B). Set in config.yml.
+    default: ""
+  model_endpoint:
+    description: Foundation-model endpoint for ai_query. Blank = auto-pick a Claude endpoint.
+    default: ""
+  warehouse_id:
+    description: A SQL warehouse the Review UI app runs statements through. Set in config.yml.
+    default: ""
+  privileged_group:
+    description: Your privileged group (same as Chapter A). The Review UI shows Approve/Reject only to its members.
+    default: ""
+
+# The `dev` target (mode + your values) lives in config.yml.
+
+resources:
+  jobs:
+    runbook_builder:
+      name: "[${bundle.target}] AI Apps Workshop · Chapter C — Runbook builder (synthesis)"
+      tasks:
+        - task_key: build_runbook
+          notebook_task:
+            notebook_path: ./src/01_build_runbook.py
+            base_parameters:
+              catalog: ${var.catalog}
+              model_endpoint: ${var.model_endpoint}
+    triage_runner:
+      name: "[${bundle.target}] AI Apps Workshop · Chapter C — Triage runner"
+      tasks:
+        - task_key: triage
+          notebook_task:
+            notebook_path: ./src/02_triage_runner.py
+            base_parameters:
+              catalog: ${var.catalog}
+              model_endpoint: ${var.model_endpoint}
+              limit: "40"
+
+  apps:
+    review_console:
+      # App names must be lowercase letters/numbers/hyphens — use the hyphen-form of the user handle so
+      # 20 participants in one workspace don't collide. (Schemas use the underscore-form prefix.)
+      name: review-${workspace.current_user.domain_friendly_name}
+      description: "OBO Review console: approve/reject proposed runbook rules; browse triage output."
+      source_code_path: ./review-app
+      # Turns on OBO — Databricks forwards the caller's token (X-Forwarded-Access-Token) and lets it run
+      # SQL. Requires workspace user-authorization enabled + an app restart.
+      user_api_scopes:
+        - sql
+      config:
+        command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+        env:
+          - name: WORKSHOP_CATALOG
+            value: ${var.catalog}
+          - name: USER_PREFIX                       # underscore-form, matches the Chapter A schema prefix
+            value: ${workspace.current_user.short_name}
+          - name: WORKSHOP_WAREHOUSE_ID
+            value: ${var.warehouse_id}
+          - name: PRIVILEGED_GROUP
+            value: ${var.privileged_group}

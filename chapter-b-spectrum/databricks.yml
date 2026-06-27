@@ -1,0 +1,76 @@
+# Chapter B — Skills ↔ MCP spectrum (Databricks Asset Bundle) · Agentic AI Apps Workshop
+# Deploys the V3 hosted MCP app (./hosted-mcp): the same tools as the V1 skill (./skill) and V2 local
+# MCP (./local-mcp) — all three import the one definition in hosted-mcp/threatintel_core.py — but
+# hosted as a Databricks App running ON-BEHALF-OF-USER (OBO), so each tool call runs its SQL as the
+# caller and the Chapter A column masks apply per caller. The app wraps the participant's
+# {prefix}_ti_tools UC functions.
+#
+# Set your 2 values in config.yml (no command-line flags). Then:
+#   databricks bundle deploy -t dev
+#   databricks bundle run threatintel_mcp -t dev        # starts the app
+#
+# PREREQ (admin, once): a workspace admin must ENABLE USER AUTHORIZATION for the workspace before the
+# `sql` scope below takes effect. After it's enabled, the app must be (re)started. Without it the app
+# still deploys but falls back to its service principal (which can't see your schemas) — so OBO is
+# what makes the tools return data. See README.md.
+bundle:
+  name: aiapps-chapter-b
+
+include:
+  - config.yml
+
+variables:
+  catalog:
+    description: The shared catalog (same one used in Chapter A). Set in config.yml.
+    default: ""
+  warehouse_id:
+    description: A SQL warehouse the MCP + the agent-deploy job run statements through. Set in config.yml.
+    default: ""
+  model_endpoint:
+    description: Tool-calling FM endpoint for the agent. Blank = auto-pick a Claude endpoint.
+    default: ""
+  uc_model_name:
+    description: Name to register the triage agent under (in {prefix}_ti_tools).
+    default: triage_agent
+
+# The `dev` target (mode + your values) lives in config.yml.
+
+resources:
+  apps:
+    threatintel_mcp:
+      # App names must be lowercase letters/numbers/hyphens — use the hyphen-form of the user handle
+      # so 20 participants in one workspace don't collide. (Schemas use the underscore-form prefix.)
+      name: mcp-${workspace.current_user.domain_friendly_name}
+      description: "OBO MCP server wrapping the participant's threat-intel UC-function tools."
+      source_code_path: ./hosted-mcp
+      # THIS is what turns on OBO — Databricks forwards the caller's token (X-Forwarded-Access-Token)
+      # and lets it run SQL. Requires workspace user-authorization enabled + an app restart.
+      user_api_scopes:
+        - sql
+      config:
+        command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+        env:
+          - name: WORKSHOP_CATALOG
+            value: ${var.catalog}
+          - name: USER_PREFIX                       # underscore-form, matches Chapter A schema prefix
+            value: ${workspace.current_user.short_name}
+          - name: WORKSHOP_WAREHOUSE_ID
+            value: ${var.warehouse_id}
+
+  jobs:
+    # Deploying an agent is imperative (log → register → agents.deploy), which DABs can't express
+    # declaratively — so this is a one-task job that RUNS that deploy notebook. It's bundled here purely
+    # for CLI ergonomics: `databricks bundle run deploy_triage_agent -t dev`.
+    deploy_triage_agent:
+      name: "[${bundle.target}] AI Apps Workshop · Chapter B — Deploy triage agent"
+      tasks:
+        - task_key: deploy_agent
+          notebook_task:
+            notebook_path: ./triage-agent/deploy.py
+            base_parameters:
+              catalog: ${var.catalog}
+              warehouse_id: ${var.warehouse_id}
+              model_endpoint: ${var.model_endpoint}
+              uc_model_name: ${var.uc_model_name}
+              # Absolute path so models-from-code logging finds agent.py regardless of the job's CWD.
+              agent_path: ${workspace.file_path}/triage-agent/agent.py

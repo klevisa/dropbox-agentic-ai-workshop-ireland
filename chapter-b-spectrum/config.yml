@@ -1,0 +1,23 @@
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │  EDIT the values below, then run (no command-line flags needed):           │
+# │     databricks bundle deploy -t dev                                        │
+# │     databricks bundle run threatintel_mcp     -t dev   # the hosted OBO MCP │
+# │     databricks bundle run deploy_triage_agent -t dev   # deploy the agent   │
+# │  Only change the text after each colon. Keep the quotes and indentation.   │
+# └─────────────────────────────────────────────────────────────────────────┘
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      # The same catalog you used in Chapter A.
+      catalog: ""
+
+      # A SQL warehouse you can use (its ID) — the MCP and the agent run the UC functions through it.
+      warehouse_id: ""
+
+      # Tool-calling FM endpoint for the agent. Leave blank to auto-pick a Claude endpoint.
+      model_endpoint: ""
+
+      # Name to register the triage agent under (in your {prefix}_ti_tools schema).
+      uc_model_name: "triage_agent"

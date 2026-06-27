@@ -1,0 +1,26 @@
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │  EDIT the values below, then run (no command-line flags needed):           │
+# │     databricks bundle deploy -t dev                                        │
+# │     databricks bundle run runbook_builder -t dev   # propose rules         │
+# │     databricks bundle run review_console  -t dev   # start the Review UI    │
+# │     # ...approve in the Review UI (or explore.py)...                        │
+# │     databricks bundle run triage_runner   -t dev   # triage incidents      │
+# │  Only change the text after each colon. Keep the quotes and indentation.   │
+# └─────────────────────────────────────────────────────────────────────────┘
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      # The same catalog you used in Chapters A and B.
+      catalog: ""
+
+      # Foundation-model endpoint for ai_query. Leave blank to auto-pick a Claude endpoint,
+      # or pin one (e.g. "databricks-claude-sonnet-4-5").
+      model_endpoint: ""
+
+      # A SQL warehouse the Review UI app runs statements through (the jobs don't need it).
+      warehouse_id: ""
+
+      # Your privileged group (same as Chapter A). The Review UI shows Approve/Reject only to its members.
+      privileged_group: ""

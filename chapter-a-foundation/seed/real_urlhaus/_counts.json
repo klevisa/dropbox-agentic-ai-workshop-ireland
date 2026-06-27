@@ -1,0 +1,10 @@
+{
+  "urls_csv_rows": 929,
+  "payloads_csv_rows": 1000,
+  "indicator_counts": {
+    "url": 929,
+    "host": 428,
+    "md5": 708,
+    "sha256": 708
+  }
+}

@@ -1,0 +1,77 @@
+# Chapter A — Foundation (Databricks Asset Bundle) · Agentic AI Apps Workshop
+# Per-PARTICIPANT bundle; builds the participant's slice of the shared catalog under their prefix:
+#   - schemas  {prefix}_ti_intel / {prefix}_ti_risk / {prefix}_ti_cs / {prefix}_ti_tools
+#   - data     CSVs ride in this bundle -> copied to a per-user volume -> loaded into tables
+#   - governance  column masks (keyed on ${var.privileged_group}) + CS-safe views
+#   - tools    the 5 UC functions (table-backed enrich — no external connection)
+#   - genie    2 spaces: a PRIVILEGED space (base tables) + an OPEN space (cs views)
+#
+# {prefix} is auto-derived in-notebook from current_user() (local part, sanitized):
+#   klevis.aliaj@databricks.com -> klevis_aliaj   (override with var.user_prefix if needed)
+#
+# The catalog is created by the ADMIN ahead of time (USE_CATALOG + CREATE_SCHEMA granted to
+# participants). Set your 3 values in config.yml — NO command-line flags. Then, from the in-workspace
+# web terminal:
+#   databricks bundle deploy -t dev
+#   databricks bundle run chapter_a_foundation -t dev
+bundle:
+  name: aiapps-chapter-a
+
+# Participants set their values in config.yml (no command line needed) — see that file.
+include:
+  - config.yml
+
+variables:
+  catalog:
+    description: Target Unity Catalog catalog (created by the admin ahead of time). Override per workshop.
+    default: ""
+  privileged_group:
+    description: >-
+      The participant's own primary group. Members see UNMASKED data + the privileged Genie
+      space + full knowledge retrieval. Everyone else sees masked. REQUIRED — set per participant.
+    default: ""
+  user_prefix:
+    description: Optional explicit schema prefix. Empty = auto-derive from current_user().
+    default: ""
+  extra_unmask_users:
+    description: Optional comma-separated emails to ALSO unmask (escape hatch; normally empty — rely on the group).
+    default: ""
+  warehouse_id:
+    description: SQL warehouse the Genie spaces query through. Set per participant.
+    default: ""
+
+# The `dev` target (mode + your variable values) lives in config.yml.
+
+resources:
+  jobs:
+    chapter_a_foundation:
+      name: "[${bundle.target}] AI Apps Workshop · Chapter A — Foundation (data + governance + tools + Genie)"
+      tasks:
+        - task_key: build_data_and_governance
+          notebook_task:
+            notebook_path: ./src/01_build_data_and_governance.py
+            base_parameters:
+              catalog: ${var.catalog}
+              privileged_group: ${var.privileged_group}
+              user_prefix: ${var.user_prefix}
+              extra_unmask_users: ${var.extra_unmask_users}
+              # The seed CSVs ride in this bundle (./seed) and deploy here. Chapter A copies
+              # them into a per-user volume, then loads. No shared seed volume needed.
+              seed_src: ${workspace.file_path}/seed
+        - task_key: build_uc_functions
+          depends_on:
+            - task_key: build_data_and_governance
+          notebook_task:
+            notebook_path: ./src/02_build_uc_functions.py
+            base_parameters:
+              catalog: ${var.catalog}
+              user_prefix: ${var.user_prefix}
+        - task_key: build_genie_spaces
+          depends_on:
+            - task_key: build_data_and_governance
+          notebook_task:
+            notebook_path: ./src/03_build_genie_spaces.py
+            base_parameters:
+              catalog: ${var.catalog}
+              user_prefix: ${var.user_prefix}
+              warehouse_id: ${var.warehouse_id}

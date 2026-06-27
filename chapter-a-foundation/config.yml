@@ -1,0 +1,20 @@
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │  EDIT THE 3 VALUES BELOW, then run (no command-line flags needed):        │
+# │     databricks bundle deploy -t dev                                        │
+# │     databricks bundle run chapter_a_foundation -t dev                      │
+# │  Only change the text after each colon. Keep the quotes and indentation.   │
+# └─────────────────────────────────────────────────────────────────────────┘
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      # 1) The catalog the admin created for the workshop.
+      catalog: ""
+
+      # 2) YOUR primary group — members see UNMASKED data + the privileged Genie space.
+      #    (Ask the admin which group you're in.)
+      privileged_group: ""
+
+      # 3) A SQL warehouse you can use (its ID, e.g. from the warehouse's URL/Connection details).
+      warehouse_id: ""

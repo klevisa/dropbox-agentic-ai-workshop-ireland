@@ -1,0 +1,6 @@
+# venv deps for the e2e harness's MCP OBO probe + running the unit suite under pytest.
+# Create the venv (internal proxy — public PyPI is blocked):
+#   python3 -m venv tests/e2e/.venv
+#   tests/e2e/.venv/bin/pip install --index-url https://pypi-proxy.dev.databricks.com/simple/ -r tests/e2e/requirements.txt
+mcp>=1.9.2,<2
+pytest
