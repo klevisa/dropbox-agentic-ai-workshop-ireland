@@ -35,6 +35,11 @@ dbutils.widgets.text("privileged_group", "", "privileged_group (your primary gro
 dbutils.widgets.text("warehouse_id", "", "warehouse_id (a SQL warehouse you can use)")
 dbutils.widgets.text("model_endpoint", "", "model_endpoint (blank = auto-pick Claude)")
 
+# COMMAND ----------
+# MAGIC %md
+# MAGIC **Fill in the widgets above**, then run the next cell to capture their values.
+
+# COMMAND ----------
 STEP = dbutils.widgets.get("step")
 CATALOG = dbutils.widgets.get("catalog").strip()
 GROUP = dbutils.widgets.get("privileged_group").strip()
