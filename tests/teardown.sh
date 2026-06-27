@@ -84,19 +84,21 @@ for s in hits:
     print(f"  deleted {s['space_id']}  {s['title']}")
 PY
 
-echo "== 5. delete Chapter C MLflow experiment =="
-# Chapter C's triage_runner sets an experiment at the deployer's home path (not bundle-tracked). An
-# experiment at a workspace path is a workspace object, so `workspace delete` removes it permanently
-# (the MLflow API's delete only soft-deletes, which would block re-creating it by name next run).
+echo "== 5. delete MLflow experiments (Chapter B agent + Chapter C triage) =="
+# The Chapter B agent deploy and Chapter C's triage_runner each set an experiment at the deployer's
+# home path (not bundle-tracked). An experiment at a workspace path is a workspace object, so
+# `workspace delete` removes it permanently (the MLflow API's delete only soft-deletes, which would
+# block re-creating it by name next run).
 EMAIL=$(databricks current-user me -p "$PROFILE" 2>/dev/null \
           | python3 -c "import sys,json;print(json.load(sys.stdin).get('userName',''))")
 if [ -n "$EMAIL" ]; then
-  EXP="/Users/$EMAIL/aiapps-chapter-c-triage"
-  if databricks workspace delete "$EXP" -p "$PROFILE" 2>/dev/null; then
-    echo "  deleted $EXP"
-  else
-    echo "  (no experiment to delete: $EXP)"
-  fi
+  for EXP in "/Users/$EMAIL/aiapps-chapter-b-triage" "/Users/$EMAIL/aiapps-chapter-c-triage"; do
+    if databricks workspace delete "$EXP" -p "$PROFILE" 2>/dev/null; then
+      echo "  deleted $EXP"
+    else
+      echo "  (no experiment to delete: $EXP)"
+    fi
+  done
 fi
 
 echo "teardown complete"

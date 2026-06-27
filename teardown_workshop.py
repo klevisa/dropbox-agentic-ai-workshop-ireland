@@ -26,6 +26,11 @@ dbutils.widgets.text("privileged_group", "", "privileged_group (so the bundle re
 dbutils.widgets.text("warehouse_id", "", "warehouse_id (so the bundle resolves; any value ok)")
 dbutils.widgets.dropdown("confirm", "NO", ["NO", "YES"], "confirm teardown")
 
+# COMMAND ----------
+# MAGIC %md
+# MAGIC **Fill in the widgets above** (and set `confirm` to YES), then run the next cell to capture them.
+
+# COMMAND ----------
 CATALOG = dbutils.widgets.get("catalog").strip()
 GROUP = dbutils.widgets.get("privileged_group").strip() or "placeholder_group"
 WAREHOUSE = dbutils.widgets.get("warehouse_id").strip() or "placeholder"
