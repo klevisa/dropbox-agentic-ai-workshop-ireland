@@ -139,5 +139,10 @@ TOOL_FUNCTIONS = ["get_account_risk", "get_account_actions", "pivot_indicator",
                   "blast_radius", "enrich_indicator"]
 for fn in TOOL_FUNCTIONS:
     spark.sql(f"GRANT EXECUTE ON FUNCTION {ctx.catalog}.{ctx.tools}.{fn} TO `{ctx.me}`")
-print(f"{len(TOOL_FUNCTIONS)} UC functions created in {ctx.catalog}.{ctx.tools} and granted to {ctx.me}")
+# Let the whole workshop call these tools too (USE SCHEMA + EXECUTE cascades to all functions in the
+# schema). They run invoker-rights, so the caller's own group drives the masks inside — same governance.
+spark.sql(f"GRANT USE SCHEMA ON SCHEMA {ctx.catalog}.{ctx.tools} TO `account users`")
+spark.sql(f"GRANT EXECUTE ON SCHEMA {ctx.catalog}.{ctx.tools} TO `account users`")
+print(f"{len(TOOL_FUNCTIONS)} UC functions created in {ctx.catalog}.{ctx.tools}; granted to {ctx.me} "
+      f"+ EXECUTE to `account users`")
 dbutils.notebook.exit(f"{ctx.catalog}.{ctx.tools}: {len(TOOL_FUNCTIONS)} UC functions built (table-backed enrich, no connection).")

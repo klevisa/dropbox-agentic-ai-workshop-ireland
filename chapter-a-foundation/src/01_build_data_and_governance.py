@@ -286,5 +286,26 @@ def create_cs_safe_views():
 create_cs_safe_views()
 
 # COMMAND ----------
+# MAGIC %md
+# MAGIC ## 8. Share with the whole workshop — grant everyone READ
+# MAGIC We grant **all workspace users** `SELECT` on these schemas. That is *not* a leak: the column masks
+# MAGIC still decide what each caller sees — a member of your `privileged_group` gets real values, everyone
+# MAGIC else gets `***REDACTED***` / NULL through the *same* tables. **Broad read + per-caller masking is the
+# MAGIC governance story**, and it lets any partner validate the masks against your data with no extra grant.
+
+# COMMAND ----------
+def grant_workshop_readers():
+    # SELECT at the schema level cascades to every table/view (current + future); USE SCHEMA lets callers
+    # navigate. `account users` is the built-in group of all account users. No EXECUTE on the mask
+    # functions is needed — UC applies column masks automatically for anyone with SELECT.
+    for schema in (ctx.intel, ctx.risk, ctx.cs):
+        spark.sql(f"GRANT USE SCHEMA ON SCHEMA {ctx.catalog}.{schema} TO `account users`")
+        spark.sql(f"GRANT SELECT ON SCHEMA {ctx.catalog}.{schema} TO `account users`")
+    print("granted USE SCHEMA + SELECT on intel/risk/cs to `account users` (masks still apply per caller)")
+
+
+grant_workshop_readers()
+
+# COMMAND ----------
 dbutils.notebook.exit(
     f"{ctx.catalog}: {ctx.intel}/{ctx.risk}/{ctx.cs} built and governed (privileged_group={PRIVILEGED_GROUP}).")

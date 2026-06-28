@@ -67,6 +67,11 @@ resources:
       name: review-${workspace.current_user.domain_friendly_name}
       description: "OBO Review console: approve/reject proposed runbook rules; browse triage output."
       source_code_path: ./review-app
+      # Let the whole workshop use this app. It's OBO, so each caller's own token runs the SQL — the
+      # Chapter A masks still govern what they see. CAN_USE = can open/call; you keep CAN_MANAGE as owner.
+      permissions:
+        - level: CAN_USE
+          group_name: "account users"
       # Turns on OBO — Databricks forwards the caller's token (X-Forwarded-Access-Token) and lets it run
       # SQL. Requires workspace user-authorization enabled + an app restart.
       user_api_scopes:

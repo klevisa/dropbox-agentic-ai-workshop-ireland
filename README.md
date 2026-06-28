@@ -70,13 +70,16 @@ demonstrable — is that **participants belong to a healthy mix of groups**. Val
 exercise**:
 
 > Say user **A** is in `klevis_seceng` and user **B** is in `klevis_dart`. A deploys their slice with
-> `privileged_group = klevis_seceng`, then grants B read access. **A** (a member) sees unmasked data;
-> **B** (not a member) sees `***REDACTED***` / banded values through the *same* tables, functions, MCP,
-> and Genie space. Swap roles — B deploys with `privileged_group = klevis_dart` and grants A — to see it
-> from the other side.
+> `privileged_group = klevis_seceng`. Every deployment **automatically grants all participants read access**
+> (`SELECT`/`EXECUTE` on the schemas, `CAN_RUN` on the Genie spaces, `CAN_USE` on the apps) — so B can
+> query A's tables, functions, MCP, and Genie space right away with **no manual grant**. **A** (a member)
+> sees unmasked data; **B** (not a member) sees `***REDACTED***` / banded values through the *same*
+> surfaces. Swap roles to see it from the other side.
 
 So `privileged_group` just names **whichever group you're in** for *your* deployment; pick one where a
-partner is **not** a member, so the two of you can prove the masks hold across every front door.
+partner is **not** a member, so the two of you can prove the masks hold across every front door. The
+broad read grant is safe **because the column masks do the governing** — access is wide open, the *data*
+is what's protected per caller.
 
 ## Deploy order (each participant)
 

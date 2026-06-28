@@ -112,6 +112,14 @@ def serialize_space(tables, instructions="", examples=(), joins=(),
     })
 
 
+def share_with_workshop(space_id):
+    """Grant all workshop participants CAN_RUN so anyone can ask this space questions. Additive — it
+    preserves your own CAN_MANAGE. The bound views/masks still govern what each caller's answers contain."""
+    w.api_client.do("PATCH", f"/api/2.0/permissions/genie/{space_id}",
+                    body={"access_control_list": [
+                        {"group_name": "account users", "permission_level": "CAN_RUN"}]})
+
+
 def upsert_space(title, description, serialized_space):
     """Create the space, or patch it in place if one with this title already exists."""
     body = {"title": title, "description": description, "parent_path": PARENT_PATH,
@@ -122,10 +130,11 @@ def upsert_space(title, description, serialized_space):
         space_id = match["space_id"]
         w.api_client.do("PATCH", f"/api/2.0/genie/spaces/{space_id}", body=body)
         print(f"  patched  {title} -> {space_id}")
-        return space_id
-    resp = w.api_client.do("POST", "/api/2.0/genie/spaces", body=body)
-    space_id = resp.get("space_id") or resp.get("id")
-    print(f"  created  {title} -> {space_id}")
+    else:
+        resp = w.api_client.do("POST", "/api/2.0/genie/spaces", body=body)
+        space_id = resp.get("space_id") or resp.get("id")
+        print(f"  created  {title} -> {space_id}")
+    share_with_workshop(space_id)
     return space_id
 
 # COMMAND ----------
