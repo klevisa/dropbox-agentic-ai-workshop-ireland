@@ -125,15 +125,27 @@ class TriageAgent(ResponsesAgent):
         return [dict(zip(cols, row)) for row in rows]
 
     def _lookup_incident(self, client, incident_id):
-        rows = self._query(
-            client,
-            f"SELECT incident_id, account_id, indicator_value, indicator_type, narrative "
-            f"FROM {S_INTEL}.incidents WHERE incident_id = :id LIMIT 1", "id", incident_id)
-        return rows[0] if rows else None
+        # Its own span so the trace opens with the incident the agent was handed (args in, row out).
+        with mlflow.start_span(name="lookup_incident", span_type="RETRIEVER") as span:
+            span.set_inputs({"incident_id": incident_id})
+            rows = self._query(
+                client,
+                f"SELECT incident_id, account_id, indicator_value, indicator_type, narrative "
+                f"FROM {S_INTEL}.incidents WHERE incident_id = :id LIMIT 1", "id", incident_id)
+            incident = rows[0] if rows else None
+            span.set_outputs({"incident": incident})
+            return incident
 
     def _run_tool(self, client, name, args):
         fn, param = TOOLS[name]
-        return self._query(client, f"SELECT * FROM {S_TOOLS}.{fn}(:{param})", param, str(args.get(param)))
+        value = str(args.get(param))
+        # Each tool call is its own TOOL span (args in, rows out), so the trace shows the agent's
+        # tool-choosing loop step by step — the same way Chapter C nests a span per tool call.
+        with mlflow.start_span(name=name, span_type="TOOL") as span:
+            span.set_inputs({param: value})
+            rows = self._query(client, f"SELECT * FROM {S_TOOLS}.{fn}(:{param})", param, value)
+            span.set_outputs({"rows": rows})
+            return rows
 
     def _incident_id_from(self, request_input):
         """The caller passes the incident id as the user message; tolerate a sentence around it."""
@@ -173,11 +185,16 @@ class TriageAgent(ResponsesAgent):
                 f"Indicator {incident['indicator_value']} ({incident['indicator_type']}). "
                 f"Narrative: {incident['narrative']}"}]
         evidence = {}
-        for _ in range(MAX_TOOL_TURNS):   # bounded agent loop — the LLM drives it, not a fixed plan
-            response = self._llm().predict(endpoint=LLM_ENDPOINT, inputs={
-                "messages": messages, "tools": TOOL_SPECS, "max_tokens": 1024, "temperature": 0})
-            choice = response["choices"][0]
-            message = choice.get("message", {})
+        for turn in range(MAX_TOOL_TURNS):   # bounded agent loop — the LLM drives it, not a fixed plan
+            # Wrap each LLM turn in its own span so the trace shows the agent's reasoning between tool
+            # calls (what it sent in, and whether it chose to call tools or conclude).
+            with mlflow.start_span(name="llm", span_type="LLM") as span:
+                span.set_inputs({"turn": turn, "messages": messages})
+                response = self._llm().predict(endpoint=LLM_ENDPOINT, inputs={
+                    "messages": messages, "tools": TOOL_SPECS, "max_tokens": 1024, "temperature": 0})
+                choice = response["choices"][0]
+                message = choice.get("message", {})
+                span.set_outputs({"finish_reason": choice.get("finish_reason"), "message": message})
             if choice.get("finish_reason") == "tool_calls":
                 messages.append(message)
                 for call in message.get("tool_calls", []):
