@@ -119,6 +119,21 @@ print(f"query:    {deployment.query_endpoint}")
 
 # COMMAND ----------
 # MAGIC %md
+# MAGIC ## Share the endpoint with the workshop (OBO)
+# MAGIC By default only the creator can query an agent endpoint. We grant all participants **CAN_QUERY** so a
+# MAGIC partner can validate masking through *your* agent too — it's OBO, so their token runs the tools and the
+# MAGIC Chapter A masks apply to them, not to you. (Additive PATCH — you keep CAN_MANAGE as the owner.)
+
+# COMMAND ----------
+w = WorkspaceClient()
+_ep = w.serving_endpoints.get(deployment.endpoint_name)
+w.api_client.do("PATCH", f"/api/2.0/permissions/serving-endpoints/{_ep.id}",
+                body={"access_control_list": [
+                    {"group_name": "account users", "permission_level": "CAN_QUERY"}]})
+print(f"granted CAN_QUERY on {deployment.endpoint_name} to `account users`")
+
+# COMMAND ----------
+# MAGIC %md
 # MAGIC ## Call it — give it an incident id, get JSON back
 # MAGIC The endpoint may take a few minutes to become READY after the first deploy.
 

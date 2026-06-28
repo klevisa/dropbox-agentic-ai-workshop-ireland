@@ -71,8 +71,9 @@ exercise**:
 
 > Say user **A** is in `klevis_seceng` and user **B** is in `klevis_dart`. A deploys their slice with
 > `privileged_group = klevis_seceng`. Every deployment **automatically grants all participants read access**
-> (`SELECT`/`EXECUTE` on the schemas, `CAN_RUN` on the Genie spaces, `CAN_USE` on the apps) — so B can
-> query A's tables, functions, MCP, and Genie space right away with **no manual grant**. **A** (a member)
+> (`SELECT`/`EXECUTE` on the schemas, `CAN_RUN` on the Genie spaces, `CAN_USE` on the apps, `CAN_QUERY` on
+> the agent endpoint) — so B can query A's tables, functions, MCP, Genie space, and agent right away with
+> **no manual grant**. **A** (a member)
 > sees unmasked data; **B** (not a member) sees `***REDACTED***` / banded values through the *same*
 > surfaces. Swap roles to see it from the other side.
 
