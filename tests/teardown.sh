@@ -29,9 +29,27 @@ for ch in chapter-a-foundation chapter-b-spectrum chapter-c-loops; do
   (cd "$ch" && databricks bundle destroy -t dev -p "$PROFILE" --auto-approve 2>&1 | tail -2) || true
 done
 
-echo "== 1b. wait for apps to finish deleting (async — else the next deploy hits 'app already exists') =="
-# App names are the hyphen-form handle: prefix klevis_aliaj_groupa -> mcp-/review-klevis-aliaj-groupa.
+echo "== 1b. BACKSTOP: delete workshop jobs + apps by name =="
+# `bundle destroy` aborts as a unit if any one resource fails (e.g. an app mid-START), orphaning the
+# rest — so we don't rely on it. Delete the jobs + apps by name directly, scoped to this PREFIX so it's
+# safe in a shared workspace. App names are the hyphen-form handle: klevis_aliaj_groupa -> klevis-aliaj-groupa.
 HANDLE="$(echo "$PREFIX" | tr '_' '-')"
+databricks jobs list -o json -p "$PROFILE" > /tmp/aiapps_jobs.json 2>/dev/null || echo '[]' > /tmp/aiapps_jobs.json
+python3 - "$PREFIX" "$PROFILE" /tmp/aiapps_jobs.json <<'PY'
+import json, subprocess, sys
+prefix, profile, path = sys.argv[1], sys.argv[2], sys.argv[3]
+data = json.load(open(path))
+jobs = data if isinstance(data, list) else data.get("jobs", [])
+for j in jobs:
+    name = (j.get("settings") or {}).get("name") or ""
+    if "AI Apps Workshop" in name and prefix in name:
+        subprocess.run(["databricks","jobs","delete",str(j["job_id"]),"-p",profile], capture_output=True)
+        print(f"  deleted job {j['job_id']}  {name}")
+PY
+for app in "mcp-$HANDLE" "review-$HANDLE"; do
+  databricks apps delete "$app" -p "$PROFILE" >/dev/null 2>&1 && echo "  deleting app $app (async)"
+done
+# wait for the apps to actually disappear, else the next deploy hits 'app already exists'
 for app in "mcp-$HANDLE" "review-$HANDLE"; do
   for i in $(seq 1 30); do
     present=$(databricks apps list -o json -p "$PROFILE" 2>/dev/null \
@@ -97,6 +115,19 @@ if [ -n "$EMAIL" ]; then
       echo "  deleted $EXP"
     else
       echo "  (no experiment to delete: $EXP)"
+    fi
+  done
+fi
+
+echo "== 6. remove bundle deployment folders (state + uploaded files) =="
+# Out-of-band deletes above can leave these behind; clearing them means the next deploy starts clean.
+if [ -n "$EMAIL" ]; then
+  for B in aiapps-chapter-a aiapps-chapter-b aiapps-chapter-c; do
+    P="/Users/$EMAIL/.bundle/$B"
+    if databricks workspace delete --recursive "$P" -p "$PROFILE" 2>/dev/null; then
+      echo "  removed $P"
+    else
+      echo "  (nothing to remove: $P)"
     fi
   done
 fi

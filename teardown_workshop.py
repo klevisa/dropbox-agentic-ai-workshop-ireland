@@ -61,6 +61,34 @@ for chapter in ["chapter-a-foundation", "chapter-b-spectrum", "chapter-c-loops"]
         print(f"  (continuing) {chapter}: {e}")
 
 # COMMAND ----------
+# 1b) BACKSTOP — delete the workshop jobs + apps by NAME, in case `bundle destroy` above didn't run to
+# completion. `bundle destroy` aborts as a unit if any one resource fails to delete (e.g. an app that's
+# mid-start), which orphans the rest — so we don't trust it as the only path. Scoped to YOUR handle so
+# this is safe in a shared workspace.
+import json as _j, subprocess, time
+
+HANDLE = PREFIX.replace("_", "-")   # app names use the hyphen-form of your handle
+
+_jl = subprocess.run([cli, "jobs", "list", "-o", "json"], env=env, capture_output=True, text=True)
+_jobs = _j.loads(_jl.stdout or "[]") if _jl.returncode == 0 else []
+_jobs = _jobs if isinstance(_jobs, list) else _jobs.get("jobs", [])
+for _job in _jobs:
+    _name = _job.get("settings", {}).get("name") or ""
+    if "AI Apps Workshop" in _name and PREFIX in _name:
+        subprocess.run([cli, "jobs", "delete", str(_job["job_id"])], env=env, capture_output=True)
+        print(f"  deleted job {_job['job_id']}  {_name}")
+
+for _app in (f"mcp-{HANDLE}", f"review-{HANDLE}"):
+    if subprocess.run([cli, "apps", "delete", _app], env=env, capture_output=True).returncode == 0:
+        print(f"  deleting app {_app} (async)")
+# wait for the apps to actually disappear, else a later redeploy hits 'app already exists'
+for _app in (f"mcp-{HANDLE}", f"review-{HANDLE}"):
+    for _ in range(20):
+        if subprocess.run([cli, "apps", "get", _app], env=env, capture_output=True).returncode != 0:
+            print(f"  {_app}: gone"); break
+        time.sleep(9)
+
+# COMMAND ----------
 # 2) delete the agent serving endpoint(s). agents.deploy() creates the endpoint imperatively (not in
 # the DAB), so bundle destroy leaves it. Match any endpoint whose name contains your {prefix}_ti_tools.
 import json as _json
@@ -106,5 +134,13 @@ for experiment in (f"/Users/{me}/aiapps-chapter-b-triage", f"/Users/{me}/aiapps-
     res = subprocess.run([cli, "workspace", "delete", experiment], env=env, capture_output=True, text=True)
     print(f"  deleted experiment {experiment}" if res.returncode == 0
           else f"  (no experiment to delete: {experiment})")
+
+# COMMAND ----------
+# 6) remove the bundle deployment folders (state + uploaded files). The out-of-band deletes above can
+# leave these behind; clearing them means your next deploy starts from a clean state.
+for _b in ("aiapps-chapter-a", "aiapps-chapter-b", "aiapps-chapter-c"):
+    _p = f"/Users/{me}/.bundle/{_b}"
+    _r = subprocess.run([cli, "workspace", "delete", "--recursive", _p], env=env, capture_output=True, text=True)
+    print(f"  removed {_p}" if _r.returncode == 0 else f"  (nothing to remove: {_p})")
 
 print("\n✅ Teardown complete. The shared catalog itself was left in place (admin-owned).")
