@@ -51,6 +51,13 @@ approve_proposed_rules()
 # MAGIC ## 3. Review the recommendations (after running `triage_runner`)
 # MAGIC One auditable row per triaged incident: the matched rule, the recommended play, and the gathered
 # MAGIC evidence (enrich / pivot / blast_radius / risk).
+# MAGIC
+# MAGIC > **Governance teaching point.** This `evidence` is a **materialized snapshot** captured when the
+# MAGIC > triage job ran **as you (a privileged caller)**, so it holds *unmasked* values — and a column mask
+# MAGIC > on the source tables does **not** retroactively follow a copy. Contrast it with the agent and the
+# MAGIC > review app's *live* account panel, which query the source **per caller (OBO)** and so redact for
+# MAGIC > non-privileged users. The lesson: masking is per-caller on the **source**; once a privileged job
+# MAGIC > **persists** its output you've created a new dataset that must be governed (and granted) on its own.
 
 # COMMAND ----------
 display(spark.sql(f"""SELECT incident_id, account_id, matched_rule_id, recommended_play, recommended_at, evidence
